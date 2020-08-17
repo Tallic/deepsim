@@ -1,14 +1,8 @@
-import os, sys
+import os
 import shutil
 import pandas as pd
 import numpy as np
-import matplotlib
 import cPickle
-
-matplotlib.use('Qt4Agg')
-import matplotlib.pyplot as plt
-from sklearn import (manifold, decomposition)
-from PIL import Image
 
 mat_dim = 128
 

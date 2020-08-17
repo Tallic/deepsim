@@ -1,12 +1,5 @@
-import sys, os, string
 import numpy as np
-import pandas as pd
-from PIL import Image
-import matplotlib
-#matplotlib.use('Qt4Agg')
-import matplotlib.pyplot as plt
 import cPickle
-import random
 
 
 neg = 40

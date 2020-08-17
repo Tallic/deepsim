@@ -2,21 +2,10 @@
 
 import tensorflow as tf
 import numpy as np
-import pandas as pd
 import os
 import time
 
-import matplotlib
-from matplotlib.ticker import NullFormatter
-from sklearn.decomposition import PCA
 from sklearn.model_selection import StratifiedKFold
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
-
-sns.set(style='white')
-# matplotlib.rcParams['font.family']=''
-matplotlib.rcParams['font.weight'] = 'bold'
 
 import graph_mat_data
 
