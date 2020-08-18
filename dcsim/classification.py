@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import tensorflow as tf
-import numpy as np
+import argparse
 import os
 import time
 
+import numpy as np
+import tensorflow as tf
 from sklearn.model_selection import StratifiedKFold
 
 import graph_mat_data
@@ -87,12 +88,14 @@ def init_weights(shape, name):
                            initializer=tf.contrib.layers.variance_scaling_initializer(
                                factor=1.0, mode='FAN_AVG', uniform=True))
 
+
 def init_bias(shape, name):
     if len(shape) > 1:
         raise Exception('Bias should be a vector.')
     return tf.get_variable(name=name, shape=shape, dtype=tf.float32,
                            initializer=tf.constant_initializer(
                                0.01))
+
 
 def model(X, dropout, phase):
     global reg_term
@@ -254,7 +257,7 @@ def train():
                                             dropout: 1.0,
                                             phase: 0})  # no dropout
             print(
-            epoch, np.mean(np.argmax(test_Y[:test_size], axis=1) == predict_Y))
+                epoch, np.mean(np.argmax(test_Y[:test_size], axis=1) == predict_Y))
             saver.save(sess=sess,
                        save_path='models/model4_' + str(epoch) + '.ckpt')
 
@@ -264,7 +267,7 @@ def train():
         print('Time cost: %.2f' % (t_end - t_beg))
 
 
-def train_10_fold_balanced():
+def train_10_fold_balanced(file_path="../dataset/g4_128.npy"):
     global reg_term
     with tf.name_scope('input'):
         X_left = tf.placeholder(tf.float32, [None, dim, dim, bin_vec_dim])
@@ -287,7 +290,6 @@ def train_10_fold_balanced():
         predict_op = tf.argmax(py_x, 1)
 
     skf = StratifiedKFold(n_splits=10)
-    file_path = "../dataset/g4_128.npy"
     dataset = np.load(open(file_path, 'r'))
     X, y = np.array(dataset['X']), np.array(dataset['y'], dtype=np.int)
     # shuffle
@@ -299,11 +301,11 @@ def train_10_fold_balanced():
     avg_recall = 0.
     avg_precision = 0.
     avg_f1_score = 0.
-    fout = open('result/10_fold_balanced.txt', 'w')
     if os.path.exists('result') is not True:
         os.mkdir("result")
     if os.path.exists("10_fold_balanced") is not True:
         os.mkdir("10_fold_balanced")
+    fout = open('result/10_fold_balanced.txt', 'w')
     for train_idx, test_idx in skf.split(X, y):
         print ('*' * 40 + str(fold_index) + '*' * 40)
         fold_path = os.path.join("10_fold_balanced", str(fold_index))
@@ -321,11 +323,11 @@ def train_10_fold_balanced():
         # compute the class weights
         classes_numbers = np.bincount(np.argmax(train_Y, axis=1))
         classes_weights = np.array([classes_numbers[1] * 2.0 /
-                                     (classes_numbers[0] + classes_numbers[1]),
-                                     classes_numbers[0] * 1.0 /
-                                     (classes_numbers[0] + classes_numbers[1])],
-                                    dtype=np.float32)
-        classes_weights = np.reshape(classes_weights, newshape=[2,1])
+                                    (classes_numbers[0] + classes_numbers[1]),
+                                    classes_numbers[0] * 1.0 /
+                                    (classes_numbers[0] + classes_numbers[1])],
+                                   dtype=np.float32)
+        classes_weights = np.reshape(classes_weights, newshape=[2, 1])
 
         t_beg = time.clock()
         # tf.reset_default_graph() # reset the model
@@ -356,17 +358,17 @@ def train_10_fold_balanced():
                     dense_train_X_right = from_sparse_arrs(
                         train_X_right[start:end])
                     batch_samples_weights = np.matmul(train_Y[start:end],
-                                                     classes_weights)
+                                                      classes_weights)
                     batch_samples_weights = np.reshape(batch_samples_weights,
                                                        newshape=[batch_size])
                     _ = sess.run([train_op],
-                                          feed_dict={X_left: dense_train_X_left,
-                                                     X_right: dense_train_X_right,
-                                                     Y: train_Y[start:end],
-                                                     sample_weights:
-                                                         batch_samples_weights,
-                                                     dropout: keep_prob,
-                                                     phase: 1})
+                                 feed_dict={X_left: dense_train_X_left,
+                                            X_right: dense_train_X_right,
+                                            Y: train_Y[start:end],
+                                            sample_weights:
+                                                batch_samples_weights,
+                                            dropout: keep_prob,
+                                            phase: 1})
                     print('epoch %d, iteration %d\n' % (epoch, step))
                     step += 1
                     if step % 100 == 0 and step != 0:
@@ -376,13 +378,13 @@ def train_10_fold_balanced():
                             batch_samples_weights,
                             newshape=[test_size])
                         predict_Y, summary = sess.run([predict_op, merged],
-                                             feed_dict={
-                                                 X_left: dense_test_X_left,
-                                                 X_right: dense_test_X_right,
-                                                 Y: test_Y[:test_size],
-                                                 sample_weights:batch_samples_weights,
-                                                 dropout: 1.0,
-                                                 phase: 0})  # no dropout
+                                                      feed_dict={
+                                                          X_left: dense_test_X_left,
+                                                          X_right: dense_test_X_right,
+                                                          Y: test_Y[:test_size],
+                                                          sample_weights: batch_samples_weights,
+                                                          dropout: 1.0,
+                                                          phase: 0})  # no dropout
                         train_writer.add_summary(summary, step)
                         print(epoch, np.mean(
                             np.argmax(test_Y[:test_size], axis=1) == predict_Y))
@@ -435,7 +437,7 @@ def train_10_fold_balanced():
     avg_f1_score /= 10.0
     print('Avg accuracy: %.4f, avg recall: %.4f, avg precision: %.4f, avg f1 '
           'score: %.4f' % (
-          avg_accuracy, avg_recall, avg_precision, avg_f1_score))
+              avg_accuracy, avg_recall, avg_precision, avg_f1_score))
     fout.write('*' * 80 + '\n')
     fout.write(
         'Avg accuracy: %.4f, avg recall: %.4f, avg precision: %.4f, avg f1 '
@@ -461,29 +463,29 @@ def stat(Y, predicted_Y, fout=None):
     recall /= real_positive_count * 1.0
     precision /= max(predict_positive_count * 1.0, 1.0)
     f1_score = 2 * recall * precision / max(
-    recall + precision, 0.00001)
+        recall + precision, 0.00001)
     print "Clone pairs: %d, non-clone pairs: %d " % (
-    real_positive_count, Y.shape[0] - real_positive_count)
+        real_positive_count, Y.shape[0] - real_positive_count)
     print "Recall: %f, precision: %f, f1 score: %f" % (
-    recall, precision, f1_score)
+        recall, precision, f1_score)
     print "Predicted_positive_count: %d, recall truly positive: %d, false positive: %d, missed true positive: %d" \
           % (predict_positive_count, retrieved_positive_count,
              predict_positive_count - retrieved_positive_count,
              real_positive_count - retrieved_positive_count)
     if fout is not None:
         fout.write("Clone pairs: %d, non-clone pairs: %d\n" % (
-    real_positive_count, Y.shape[0] - real_positive_count))
+            real_positive_count, Y.shape[0] - real_positive_count))
         fout.write("Recall: %.4f, precision: %.4f, f1 score: %.4f\n" % (
-    recall, precision, f1_score))
+            recall, precision, f1_score))
         fout.write("Predicted_positive_count: %d, recall truly positive: %d, "
                    "false positive: %d, missed true positive: %d\n" \
-          % (predict_positive_count, retrieved_positive_count,
-             predict_positive_count - retrieved_positive_count,
-             real_positive_count - retrieved_positive_count))
+                   % (predict_positive_count, retrieved_positive_count,
+                      predict_positive_count - retrieved_positive_count,
+                      real_positive_count - retrieved_positive_count))
     return recall, precision, f1_score
 
 
-def predict_on_full_dataset():
+def predict_on_full_dataset(file_path="../dataset/g4_128.npy"):
     with tf.name_scope('input'):
         X_left = tf.placeholder(tf.float32, [None, dim, dim, bin_vec_dim])
         X_right = tf.placeholder(tf.float32, [None, dim, dim, bin_vec_dim])
@@ -499,10 +501,9 @@ def predict_on_full_dataset():
     py_x = classification_predict(h_left, h_right, dropout, phase)
     predict_op = tf.argmax(py_x, 1)
 
-    file_path = "../dataset/g4_128.npy"
     dataset = np.load(open(file_path, 'r'))
     X, y = np.array(dataset['X']), np.array(dataset['y'], dtype=np.int)
-    
+
     t_beg = time.clock()
     saver = tf.train.Saver()
     sess = tf.InteractiveSession()
@@ -511,19 +512,19 @@ def predict_on_full_dataset():
     iter = 0
     X_reps = []
     for start, end in zip(range(0, np.shape(X)[0], batch_size), \
-                     range(batch_size, np.shape(X)[0] + 1, batch_size)):
+                          range(batch_size, np.shape(X)[0] + 1, batch_size)):
         dense_X = from_sparse_arrs(X[start:end])
         h_val = sess.run(h_op, feed_dict={X_left: dense_X, dropout: 1.0,
-                                          phase:0})
+                                          phase: 0})
         X_reps.extend(h_val.tolist())
     dense_X = from_sparse_arrs(X[end:])
-    h_val = sess.run(h_op, feed_dict={X_left: dense_X, dropout: 1.0, phase:0})
+    h_val = sess.run(h_op, feed_dict={X_left: dense_X, dropout: 1.0, phase: 0})
     X_reps.extend(h_val.tolist())
     test_X_left = []
     test_X_right = []
     test_Y = []
     for i in xrange(y.shape[0]):
-        for j in xrange(i+1, y.shape[0]):
+        for j in xrange(i + 1, y.shape[0]):
             if y[i] == y[j]:
                 test_X_left.append(X_reps[i])
                 test_X_right.append(X_reps[j])
@@ -535,7 +536,6 @@ def predict_on_full_dataset():
     test_X_left = np.array(test_X_left)
     test_X_right = np.array(test_X_right)
     test_Y = np.array(test_Y, dtype=np.float32)
-    
 
     overall_predict_Y = []
     for start, end in zip(range(0, np.shape(test_X_left)[0], batch_size),
@@ -553,7 +553,11 @@ def predict_on_full_dataset():
 
 
 if __name__ == '__main__':
-    train_10_fold_balanced()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input")
+    args = parser.parse_args()
+
+    train_10_fold_balanced(args.input)
     st = time.time()
-    predict_on_full_dataset()
+    predict_on_full_dataset(args.input)
     print "Predict time on the full dataset: ", time.time() - st
